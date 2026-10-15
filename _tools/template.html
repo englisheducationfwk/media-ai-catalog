@@ -340,6 +340,7 @@ var ICON={
 
 function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function attr(s){return esc(s);}
+function plural(n,one,few,many){var m10=n%10,m100=n%100;if(m10===1&&m100!==11)return one;if(m10>=2&&m10<=4&&(m100<12||m100>14))return few;return many;}
 function $(s,c){return (c||document).querySelector(s);}
 function $all(s,c){return Array.prototype.slice.call((c||document).querySelectorAll(s));}
 
@@ -525,11 +526,11 @@ function guideCard(g){
     +'<div class="body"><div class="bin"><div class="pad">'+body+'</div></div></div></div>';
 }
 function viewGuidesHTML(){
-  var h='<div class="wrap"><div class="intro"><b>Двенадцать коротких инструкций.</b> Прочитай первые три — и уже сможешь сделать первую картинку и первое видео. Остальные пригодятся по ходу.</div></div>';
+  var h='<div class="wrap"><div class="intro"><b>'+D.guides.length+' '+plural(D.guides.length,'короткая инструкция','короткие инструкции','коротких инструкций')+'.</b> Начни с первых трёх — и уже сможешь сделать первую картинку и первое видео. Остальные пригодятся по ходу.</div></div>';
   h+='<div class="wrap" style="margin-top:14px">';
   D.guides.forEach(function(g){h+=guideCard(g);});
   h+='</div>';
-  h+='<div class="wrap"><footer>Сначала попробуй то, что работает без VPN: GigaChat, Шедеврум, Kling. Всё получится! 💪</footer></div>';
+  h+='<div class="wrap"><footer>Сначала попробуй то, что работает без VPN: GigaChat, Шедеврум, Kling, Moises. Всё получится! 💪</footer></div>';
   return h;
 }
 
