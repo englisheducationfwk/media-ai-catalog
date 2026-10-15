@@ -159,8 +159,10 @@ main{position:relative;z-index:1}
 .infogrid i{display:block;font-style:normal;font-size:10px;font-weight:700;letter-spacing:.08em;
   text-transform:uppercase;color:var(--tx3);margin-bottom:2px}
 .infogrid b{font-size:13.5px;font-weight:600;color:var(--tx)}
-.acts{display:flex;gap:8px;margin-top:15px}
-.openbtn{flex:1;height:48px;border-radius:15px;background:var(--grad);color:#fff;text-decoration:none;
+.acts{display:flex;flex-direction:column;gap:8px;margin-top:15px}
+.actsrow{display:flex;gap:8px}
+.actsrow .ghostbtn{flex:1;min-width:0}
+.openbtn{height:48px;border-radius:15px;background:var(--grad);color:#fff;text-decoration:none;
   display:flex;align-items:center;justify-content:center;gap:7px;font-weight:700;font-size:15px;
   box-shadow:0 10px 24px -10px rgba(124,108,255,.7);transition:transform .2s var(--ease)}
 .openbtn:active{transform:scale(.97)}
@@ -252,6 +254,24 @@ main{position:relative;z-index:1}
 .fn span{display:block;font-size:12px;color:var(--tx3);margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .fgo{flex:none;color:var(--tx3)}
 
+/* ---- пометки: избранное / не зашло ---- */
+.fbtn.dn span{font-size:17px;line-height:1}
+.fbtn.dn:not(.on) span{filter:grayscale(1);opacity:.45}
+.nrow{display:flex;align-items:stretch;border-top:1px solid var(--line)}
+.nrow:first-child{border-top:0}
+.nrow .fr{border-top:0;flex:1;min-width:0}
+.nx{flex:none;width:50px;border:0;border-left:1px solid var(--line);background:none;color:var(--tx3);
+  font-size:15px;cursor:pointer;font-family:inherit;display:grid;place-items:center;transition:background .16s}
+.nx:active{background:rgba(255,255,255,.07)}
+.nchips{display:flex;flex-wrap:wrap;gap:6px;padding:2px 14px 12px 64px}
+.nchips .lbl{font-size:12px;color:var(--tx3);font-weight:600;align-self:center}
+.nchips .altchip{max-width:210px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.altchip.on{color:var(--amber);border-color:rgba(255,176,58,.45);background:rgba(255,176,58,.1)}
+.ninput{flex:1;min-width:150px;height:33px;border-radius:99px;border:1px solid var(--line2);
+  background:var(--surf);color:var(--tx);font-size:13px;font-weight:600;font-family:inherit;
+  padding:0 12px;outline:none}
+.ninput:focus{border-color:var(--vio)}
+
 .empty{text-align:center;color:var(--tx3);padding:60px 24px;font-size:15px}
 .empty b{display:block;font-size:34px;margin-bottom:14px}
 .empty .ghostbtn{margin:16px auto 0;display:inline-flex}
@@ -295,7 +315,11 @@ footer b{color:var(--tx2);font-weight:600}
 </header>
 <main id="main"></main>
 <nav class="tabbar" id="tabs" aria-label="Разделы">
-  <button data-view="cat" class="on">
+  <button data-view="home">
+    <svg viewBox="0 0 24 24" width="23" height="23" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 10.5 12 3.5l8.5 7"/><path d="M5.5 9v10a1.5 1.5 0 0 0 1.5 1.5h10A1.5 1.5 0 0 0 18.5 19V9"/></svg>
+    Главное
+  </button>
+  <button data-view="cat">
     <svg viewBox="0 0 24 24" width="23" height="23" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7.5" height="7.5" rx="2.2"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="2.2"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="2.2"/><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="2.2"/></svg>
     Каталог
   </button>
@@ -353,8 +377,13 @@ var favs={},checks={};
 (LS.get('nm_check',[])||[]).forEach(function(id){checks[id]=1;});
 function saveFavs(){var a=[];for(var k in favs)if(favs[k])a.push(k);LS.set('nm_fav',a);}
 function saveChecks(){var a=[];for(var k in checks)if(checks[k])a.push(k);LS.set('nm_check',a);}
+var dislikes={},notes=LS.get('nm_note',{})||{};
+(LS.get('nm_no',[])||[]).forEach(function(id){dislikes[id]=1;});
+function saveDislikes(){var a=[];for(var k in dislikes)if(dislikes[k])a.push(k);LS.set('nm_no',a);}
+function saveNotes(){LS.set('nm_note',notes);}
+var REASONS=['Нужен VPN','Не открылось','Сложно','Не понравилось','Нет русского'];
 
-var state={view:'cat',q:'',cat:'all',seg:'vpn',app:false,pgroup:'all'};
+var state={view:'cat',q:'',cat:'all',seg:'vpn',app:false,pgroup:'all',noteEdit:null};
 var openIds={};
 
 /* ---------- бейджи ---------- */
@@ -377,7 +406,7 @@ function diffColor(d){return d===1?'#3ddc97':d===3?'#ff7a8a':'#ffb03a';}
 /* ---------- карточка инструмента ---------- */
 function toolCard(t){
   var c=CAT[t.cat]||{color:'#7c6cff'};
-  var open=!!openIds[t.id],fav=!!favs[t.id];
+  var open=!!openIds[t.id],fav=!!favs[t.id],dis=!!dislikes[t.id];
   var body='';
   body+='<div class="sec-t">Что это</div><p class="p">'+t.what+'</p>';
   if(t.freeText) body+='<div class="sec-t">Что даёт бесплатно</div><p class="p">'+t.freeText+'</p>';
@@ -402,7 +431,10 @@ function toolCard(t){
     +'<div><i>Проверено</i><b>'+esc(D.meta.checked||'')+'</b></div>'
     +'</div>';
   body+='<div class="acts"><a class="openbtn" href="'+attr(t.url)+'" target="_blank" rel="noopener">Открыть'+ICON.ext+'</a>'
-    +'<button class="ghostbtn favbtn'+(fav?' on':'')+'" data-fav="'+t.id+'">'+ICON.star+(fav?'В избранном':'В избранное')+'</button></div>';
+    +'<div class="actsrow">'
+    +'<button class="ghostbtn favbtn'+(fav?' on':'')+'" data-fav="'+t.id+'">'+ICON.star+(fav?'В избранном':'В избранное')+'</button>'
+    +'<button class="ghostbtn dnbtn'+(dis?' on':'')+'" data-no="'+t.id+'">👎'+(dis?'Отмечено':'Не зашло')+'</button>'
+    +'</div></div>';
   if(t.alt&&t.alt.length){
     body+='<div class="alts"><span class="lbl">Похожее:</span>';
     t.alt.forEach(function(id){var a=TOOL[id];if(a)body+='<button class="altchip" data-alt="'+a.id+'">'+esc(a.name)+'</button>';});
@@ -415,6 +447,7 @@ function toolCard(t){
     +'<span class="tag">'+esc(t.tagline)+'</span>'
     +'<span class="badges">'+badges(t)+'</span></span>'
     +ICON.chev+'</button>'
+    +'<button class="fbtn dn'+(dis?' on':'')+'" data-no="'+t.id+'" aria-label="Не зашло"><span>👎</span></button>'
     +'<button class="fbtn'+(fav?' on':'')+'" data-fav="'+t.id+'" aria-label="В избранное">'+ICON.star+'</button></div>'
     +'<div class="body"><div class="bin"><div class="pad">'+body+'</div></div></div>'
     +'</div>';
@@ -580,20 +613,54 @@ function renderPrompts(){
 }
 
 /* ---------- вкладка «Моё» ---------- */
-function favListHTML(){
-  var ids=Object.keys(favs).filter(function(id){return favs[id]&&TOOL[id];});
-  if(!ids.length){
-    return '<div class="intro">Пока пусто. Открой <b>Каталог</b>, найди интересный сервис и нажми ☆ справа от названия — он появится здесь.</div>';
-  }
-  var h='<div class="clcard">';
-  ids.forEach(function(id){
-    var t=TOOL[id],c=CAT[t.cat]||{color:'#7c6cff'};
-    h+='<button class="fr" data-goto="'+id+'">'
+/* ---------- вкладка «Главное» ---------- */
+function homeRowHTML(id,withNote){
+  var t=TOOL[id];if(!t)return '';
+  var c=CAT[t.cat]||{color:'#7c6cff'};
+  var h='<div class="nrow"><button class="fr" data-goto="'+id+'">'
       +'<span class="fic" style="background:linear-gradient(135deg,'+c.color+'30,'+c.color+'12);border-color:'+c.color+'45">'+(t.emo||esc(t.name[0]))+'</span>'
       +'<span class="fn"><b>'+esc(t.name)+'</b><span>'+esc(t.tagline)+'</span></span>'
-      +'<span class="fgo">'+ICON.go+'</span></button>';
+      +'<span class="fgo">'+ICON.go+'</span></button>'
+    +'<button class="nx" data-'+(withNote?'no':'fav')+'="'+id+'" aria-label="'+(withNote?'Убрать пометку «не зашло»':'Убрать из избранного')+'">✕</button></div>';
+  if(withNote)h+=noteChipsHTML(id);
+  return h;
+}
+function noteChipsHTML(id){
+  var cur=notes[id]||'';
+  var custom=!!cur&&REASONS.indexOf(cur)<0;
+  if(state.noteEdit===id){
+    return '<div class="nchips"><input class="ninput" id="ni" placeholder="Напиши причину — почему не подошло" value="'+attr(custom?cur:'')+'" autocomplete="off" enterkeyhint="done"><button class="altchip" data-nsave="'+id+'">Ок</button></div>';
+  }
+  var h='<div class="nchips"><span class="lbl">Что не так:</span>';
+  REASONS.forEach(function(r){
+    h+='<button class="altchip'+(cur===r?' on':'')+'" data-note="'+attr(id+'|'+r)+'">'+esc(r)+'</button>';
   });
+  h+='<button class="altchip'+(custom?' on':'')+'" data-note="'+attr(id+'|__c__')+'">'+(custom?esc(cur):'Другое…')+'</button>';
   return h+'</div>';
+}
+function viewHomeHTML(){
+  var favIds=Object.keys(favs).filter(function(id){return favs[id]&&TOOL[id];});
+  var noIds=Object.keys(dislikes).filter(function(id){return dislikes[id]&&TOOL[id];});
+  if(!favIds.length&&!noIds.length){
+    return '<div class="wrap"><div class="intro" style="margin-top:6px"><b>👋 Здесь будет твоё.</b><br><br>Открой <b>Каталог</b>, найди сервис и нажми у карточки <b>⭐ В избранное</b> — то, что пригодилось. А если что-то не подошло — нажми <b>👎 Не зашло</b> и отметь причину: «нужен VPN», «сложно»… Всё соберётся на этом экране.</div>'
+      +'<div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">'
+      +'<button class="ghostbtn" data-view="cat" style="height:44px;border-radius:13px">🗂 Открыть Каталог</button>'
+      +'<button class="ghostbtn" data-goseg="start" style="height:44px;border-radius:13px">⭐ С чего начать</button>'
+      +'</div></div>';
+  }
+  var h='<div class="wrap"><div class="intro" style="margin-top:6px"><b>⭐ Пригодилось. 👎 Не зашло.</b><br>Пометки ставятся в Каталоге, у карточки сервиса. А причину «не зашло» можно выбрать здесь.</div></div>';
+  if(favIds.length){
+    h+='<div class="wrap"><div class="sect" style="margin-top:22px">⭐ Избранное <i>'+favIds.length+'</i></div><div class="clcard">';
+    favIds.forEach(function(id){h+=homeRowHTML(id,false);});
+    h+='</div></div>';
+  }
+  if(noIds.length){
+    h+='<div class="wrap"><div class="sect">👎 Не зашло <i>'+noIds.length+'</i></div><div class="clcard">';
+    noIds.forEach(function(id){h+=homeRowHTML(id,true);});
+    h+='</div></div>';
+  }
+  h+='<div class="wrap"><footer>Нажми на строку — откроется карточка сервиса в Каталоге, крестик ✕ убирает пометку.<br>Подсказка: в Каталоге есть фильтр «Без VPN» — там сервисы, которые работают из России сразу.</footer></div>';
+  return h;
 }
 function checklistHTML(){
   var total=D.checklist.length;
@@ -613,8 +680,7 @@ function themeIsLight(){return document.documentElement.dataset.theme==='light';
 function viewMyHTML(){
   var light=themeIsLight();
   var h='<div class="wrap">';
-  h+='<div class="sect" style="margin-top:6px">Избранное <i>'+Object.keys(favs).filter(function(k){return favs[k];}).length+'</i></div>';
-  h+=favListHTML();
+  h+='<div class="intro" style="margin-top:6px">⭐ Избранное и пометки «👎 Не зашло» живут на вкладке <b>«Главное»</b>.</div>';
   h+='<div class="sect">Мой прогресс</div>';
   h+=checklistHTML();
   h+='<div class="sect">Настройки</div>';
@@ -624,9 +690,9 @@ function viewMyHTML(){
     +'<button class="setrow" id="homerow"><span class="sic">'+ICON.home+'</span>'
     +'<span class="stx"><b>Как «установить» на iPhone</b><span>Safari → Поделиться → На экран «Домой»</span></span>'+ICON.go+'</button>'
     +'<button class="setrow" id="resetrow"><span class="sic">'+ICON.trash+'</span>'
-    +'<span class="stx"><b>Сбросить избранное и прогресс</b><span>Начнём заново</span></span></button>'
+    +'<span class="stx"><b>Сбросить пометки и прогресс</b><span>Начнём заново</span></span></button>'
     +'</div>';
-  h+='<footer><b>Нейро-Мастерская</b> · собрано '+esc(D.meta.built||'')+'<br>Нажимай ☆ в каталоге, чтобы сохранить сервисы сюда.</footer>';
+  h+='<footer><b>Нейро-Мастерская</b> · собрано '+esc(D.meta.built||'')+'<br>Сервисы сохраняй ☆ в Каталоге — они появятся на вкладке «Главное».</footer>';
   h+='</div>';
   return h;
 }
@@ -634,10 +700,15 @@ function viewMyHTML(){
 /* ---------- рендер вида ---------- */
 function renderView(){
   var m=$('#main');
-  if(state.view==='cat')m.innerHTML=viewCatHTML();
+  if(state.view==='home')m.innerHTML=viewHomeHTML();
+  else if(state.view==='cat')m.innerHTML=viewCatHTML();
   else if(state.view==='guides')m.innerHTML=viewGuidesHTML();
   else if(state.view==='prompts')m.innerHTML=viewPromptsHTML();
   else m.innerHTML=viewMyHTML();
+  if(state.view==='home'&&state.noteEdit){
+    var ni=document.getElementById('ni');
+    if(ni&&document.activeElement!==ni)ni.focus();
+  }
   syncThemeBtn();
 }
 function syncTabs(){
@@ -647,6 +718,7 @@ function syncTabs(){
 }
 function switchView(v,keepScroll){
   state.view=v;
+  state.noteEdit=null;
   try{history.replaceState(null,'','#'+v);}catch(e){}
   renderView();syncTabs();
   if(!keepScroll)window.scrollTo(0,0);
@@ -667,10 +739,58 @@ function renderAllFav(id,on){
 }
 function toggleFav(id){
   var on=!favs[id];
-  if(on)favs[id]=1;else delete favs[id];
+  if(on){
+    favs[id]=1;
+    if(dislikes[id]){delete dislikes[id];delete notes[id];saveDislikes();saveNotes();renderAllNo(id,false);}
+  }else delete favs[id];
   saveFavs();
   renderAllFav(id,on);
-  if(state.view==='my')renderView();
+  if(state.view==='my'||state.view==='home')renderView();
+}
+/* ---------- пометка «Не зашло» ---------- */
+function renderAllNo(id,on){
+  $all('[data-no="'+id+'"]').forEach(function(b){
+    if(b.classList.contains('fbtn')){b.classList.toggle('on',on);return;}
+    if(b.classList.contains('dnbtn')){
+      b.classList.toggle('on',on);
+      b.innerHTML='👎'+(on?'Отмечено':'Не зашло');
+    }
+  });
+}
+function toggleDislike(id){
+  var on=!dislikes[id];
+  if(on){
+    dislikes[id]=1;
+    if(favs[id]){delete favs[id];saveFavs();renderAllFav(id,false);}
+  }else{delete dislikes[id];delete notes[id];saveNotes();}
+  saveDislikes();
+  renderAllNo(id,on);
+  if(state.view==='my'||state.view==='home')renderView();
+}
+function handleNote(val){
+  var i=val.indexOf('|');if(i<0)return;
+  var id=val.slice(0,i),reason=val.slice(i+1);
+  if(reason==='__c__'){
+    state.noteEdit=id;
+    renderView();
+    return;
+  }
+  state.noteEdit=null;
+  if(notes[id]===reason){
+    delete notes[id];
+  }else{
+    notes[id]=reason;
+  }
+  saveNotes();
+  if(state.view==='home')renderView();
+}
+function saveCustomNote(id){
+  var el=document.getElementById('ni');
+  var t=el?(el.value||'').trim():'';
+  if(t)notes[id]=t;else delete notes[id];
+  state.noteEdit=null;
+  saveNotes();
+  if(state.view==='home')renderView();
 }
 /* ---------- перейти к инструменту ---------- */
 function focusTool(id){
@@ -732,6 +852,12 @@ mainEl.addEventListener('click',function(e){
   var el;
   el=e.target.closest('[data-fav]');
   if(el){toggleFav(el.getAttribute('data-fav'));return;}
+  el=e.target.closest('[data-nsave]');
+  if(el){saveCustomNote(el.getAttribute('data-nsave'));return;}
+  el=e.target.closest('[data-note]');
+  if(el){handleNote(el.getAttribute('data-note'));return;}
+  el=e.target.closest('[data-no]');
+  if(el){toggleDislike(el.getAttribute('data-no'));return;}
   el=e.target.closest('.hdbtn');
   if(el){
     var id=el.getAttribute('data-id');
@@ -771,6 +897,7 @@ mainEl.addEventListener('click',function(e){
   el=e.target.closest('[data-goseg]');
   if(el){
     state.seg=el.getAttribute('data-goseg');
+    if(state.view!=='cat'){state.view='cat';syncTabs();}
     renderView();
     var l=$('#list');if(l)l.scrollIntoView({behavior:'smooth',block:'start'});
     return;
@@ -803,8 +930,9 @@ mainEl.addEventListener('click',function(e){
   if(el){toggleTheme();renderView();return;}
   el=e.target.closest('#resetrow');
   if(el){
-    if(confirm('Очистить избранное и прогресс?')){
-      favs={};checks={};saveFavs();saveChecks();renderView();
+    if(confirm('Очистить избранное, пометки «не зашло» и прогресс?')){
+      favs={};checks={};dislikes={};notes={};
+      saveFavs();saveChecks();saveDislikes();saveNotes();renderView();
     }
     return;
   }
@@ -814,6 +942,11 @@ mainEl.addEventListener('input',function(e){
     state.q=e.target.value.trim();
     var sb=$('#searchbox');if(sb)sb.classList.toggle('has',!!e.target.value);
     renderList();
+  }
+});
+mainEl.addEventListener('keydown',function(e){
+  if(e.key==='Enter'&&e.target&&e.target.id==='ni'&&state.noteEdit){
+    e.preventDefault();saveCustomNote(state.noteEdit);
   }
 });
 mainEl.addEventListener('click',function(e){
@@ -851,7 +984,8 @@ totop.addEventListener('click',function(){window.scrollTo({top:0,behavior:'smoot
 
 /* ---------- старт ---------- */
 var h=(location.hash||'').replace('#','');
-if(['cat','guides','prompts','my'].indexOf(h)>=0)state.view=h;
+if(['cat','guides','prompts','my','home'].indexOf(h)>=0)state.view=h;
+else if(Object.keys(favs).length||Object.keys(dislikes).length)state.view='home';
 syncThemeBtn();
 renderView();
 syncTabs();
